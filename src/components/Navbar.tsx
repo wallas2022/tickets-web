@@ -1,73 +1,70 @@
-import toast from "react-hot-toast";
+import {
+  Flex,
+  Button,
+  Heading,
+  useColorMode,
+  useColorModeValue,
+} from "@chakra-ui/react";
+import { MoonIcon, SunIcon } from "@chakra-ui/icons";
 import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 export default function Navbar() {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const { colorMode, toggleColorMode } = useColorMode();
 
   const handleLogout = () => {
     toast(
       (t) => (
         <span>
           ¿Cerrar sesión?
-          <button
+          <Button
+            size="sm"
+            ml={2}
+            colorScheme="red"
             onClick={() => {
               toast.dismiss(t.id);
               logout();
               toast.success("Sesión cerrada correctamente 👋");
             }}
-            style={{
-              marginLeft: "10px",
-              color: "#fff",
-              background: "#ef4444",
-              border: "none",
-              borderRadius: "5px",
-              padding: "4px 8px",
-              cursor: "pointer",
-            }}
           >
             Sí
-          </button>
+          </Button>
         </span>
       ),
-      {
-        duration: 4000,
-        style: { background: "#333", color: "#fff" },
-      }
+      { duration: 4000 }
     );
   };
 
   return (
-    <nav
-      style={{
-        background: "#0f172a",
-        color: "white",
-        padding: "10px 20px",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-      }}
+    <Flex
+      bg={useColorModeValue("gray.800", "gray.900")}
+      color="white"
+      px={6}
+      py={3}
+      align="center"
+      justify="space-between"
+      boxShadow="md"
     >
-      <h2
-        style={{ cursor: "pointer" }}
+      <Heading
+        as="h2"
+        fontSize="xl"
+        cursor="pointer"
         onClick={() => navigate("/tickets")}
       >
         🎟️ Sistema de Tickets
-      </h2>
-      <button
-        onClick={handleLogout}
-        style={{
-          background: "#f43f5e",
-          color: "white",
-          border: "none",
-          padding: "6px 10px",
-          borderRadius: "6px",
-          cursor: "pointer",
-        }}
-      >
-        Cerrar sesión
-      </button>
-    </nav>
+      </Heading>
+
+      <Flex align="center" gap={3}>
+        <Button onClick={toggleColorMode}>
+          {colorMode === "light" ? <MoonIcon /> : <SunIcon />}
+        </Button>
+        <Button colorScheme="red" onClick={handleLogout}>
+          Cerrar sesión
+        </Button>
+      </Flex>
+    </Flex>
   );
 }
