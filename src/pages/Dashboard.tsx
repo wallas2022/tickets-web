@@ -1,5 +1,7 @@
 import {
   Box,
+  Button,
+  Flex,
   Heading,
   SimpleGrid,
   Stat,
@@ -10,10 +12,12 @@ import {
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { useNavigate } from "react-router-dom";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<any>(null);
   const [role, setRole] = useState<string>("");
+  const navigator = useNavigate();
 
   const cardBg = useColorModeValue("gray.100", "gray.700");
 
@@ -35,7 +39,16 @@ export default function DashboardPage() {
 
   return (
     <Box p={8}>
-      <Heading mb={6}>Panel de Estadísticas</Heading>
+      <Flex justify="space-between" align="center" mb={6}>
+        <Heading>Panel de Estadísticas</Heading>
+        <Button
+          colorScheme="teal"
+          variant="outline"
+          onClick={() => navigator("/")}
+        >
+          ← Regresar a Tickets
+        </Button>
+      </Flex>
 
       {/* Si es ADMIN, muestra todos los usuarios */}
       {role === "ADMIN" && (
