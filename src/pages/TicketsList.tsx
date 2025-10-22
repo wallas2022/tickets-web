@@ -160,6 +160,15 @@ export default function TicketsList() {
       <Box p={8}>
         <Flex justify="space-between" align="center" mb={6}>
           <Heading>Mis Tickets</Heading>
+          {role === "ADMIN" && (
+          <Button
+            colorScheme="teal"
+            size="sm"
+            onClick={() => navigate("/admin/users")}
+          >
+            👤 Usuarios
+          </Button>
+        )}
 
           <Flex gap={3}>
             {role === "CUSTOMER" && (

@@ -57,6 +57,8 @@ export default function Navbar() {
         🎟️ Sistema de Tickets
       </Heading>
 
+      
+
       <Flex align="center" gap={3}>
         <Button onClick={toggleColorMode}>
           {colorMode === "light" ? <MoonIcon /> : <SunIcon />}

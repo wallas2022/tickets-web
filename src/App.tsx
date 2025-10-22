@@ -4,6 +4,7 @@ import Dashboard from "./pages/Dashboard";
 import TicketsList from "./pages/TicketsList";
 import type { JSX } from "react";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import AdminUsersPage from "./pages/AdminUsersPage";
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const token = localStorage.getItem("access_token");
@@ -23,6 +24,14 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+       <Route
+  path="/admin/users"
+  element={
+    <ProtectedRoute allowedRoles={["ADMIN"]}>
+      <AdminUsersPage />
+    </ProtectedRoute>
+  }
+/> 
       <Route
         path="/tickets"
         element={
