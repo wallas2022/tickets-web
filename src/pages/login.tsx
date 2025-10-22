@@ -6,8 +6,13 @@ import {
   Heading,
   useColorModeValue,
   Flex,
+  Text,
+  InputGroup,
+  InputRightElement,
+  IconButton,
 } from "@chakra-ui/react";
 import { useState } from "react";
+import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import { useAuth } from "../hooks/useAuth";
 import toast from "react-hot-toast";
 
@@ -15,6 +20,7 @@ export default function Login() {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,48 +35,82 @@ export default function Login() {
 
   return (
     <Flex
-      minH="100vh"
+      direction="column"
       align="center"
       justify="center"
-      bg={useColorModeValue("gray.100", "gray.800")}
+      h="100vh"
+      bg={useColorModeValue("gray.50", "gray.900")}
+      gap={6}
     >
+      {/* 🔹 Título principal fuera del box */}
+      <Heading size="2xl" color={useColorModeValue("gray.800", "white")}>
+        Sistema de Tickets 🎟️
+      </Heading>
+
+      {/* 🔹 Caja con el formulario */}
       <Box
-        bg={useColorModeValue("white", "gray.700")}
-        p={8}
-        rounded="lg"
-        boxShadow="lg"
-        width="sm"
+        bg={useColorModeValue("white", "gray.800")}
+        p={10}
+        rounded="2xl"
+        shadow="2xl"
+        w="sm"
+        textAlign="center"
       >
-        <Heading mb={6} textAlign="center">
-          Iniciar Sesión
+        <Heading size="lg" mb={6}>
+          Iniciar sesión
         </Heading>
+
         <form onSubmit={handleSubmit}>
           <VStack spacing={4}>
             <Input
-              placeholder="Correo electrónico"
               type="email"
+              placeholder="Correo electrónico"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              focusBorderColor="teal.400"
               required
             />
-            <Input
-              placeholder="Contraseña"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+
+            <InputGroup>
+              <Input
+                type={showPassword ? "text" : "password"}
+                placeholder="Contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                focusBorderColor="teal.400"
+                required
+              />
+              <InputRightElement>
+                <IconButton
+                  variant="ghost"
+                  size="sm"
+                  aria-label={
+                    showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                  }
+                  icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
+                  onClick={() => setShowPassword(!showPassword)}
+                />
+              </InputRightElement>
+            </InputGroup>
+
             <Button
               type="submit"
               colorScheme="teal"
-              width="full"
-              isLoading={login.isPending}
+              w="full"
+              mt={2}
+              size="md"
+              fontWeight="bold"
             >
-              Entrar
+              Iniciar sesión
             </Button>
           </VStack>
         </form>
       </Box>
+
+      {/* 🔹 Footer (fuera del box) */}
+      <Text fontSize="sm" color="gray.500" mt={4}>
+        © 2025 Galácticos S.A. — Todos los derechos reservados.
+      </Text>
     </Flex>
   );
 }
