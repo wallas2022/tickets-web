@@ -27,12 +27,14 @@ import {
   ModalCloseButton,
   IconButton,
 } from "@chakra-ui/react";
+
 import Navbar from "../components/Navbar";
+import TicketComments from "../components/TicketComments"
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { api } from "../api";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeftIcon, ArrowRightIcon, SearchIcon } from "@chakra-ui/icons";
 
 export default function TicketsList() {
@@ -51,6 +53,7 @@ export default function TicketsList() {
   const queryClient = useQueryClient();
   const [statusLocal, setStatusLocal] = useState<string>("OPEN");
   const [agents, setAgents] = useState<any[]>([]);
+
 
   // 📦 Cargar tickets con paginación y búsqueda
   const loadTickets = async (pageNum = 1, searchText = "") => {
@@ -316,6 +319,19 @@ export default function TicketsList() {
               <Text mt={6} whiteSpace="pre-wrap">
                 {selected?.description}
               </Text>
+             {/* 💬 Sección de comentarios */}
+              {selected && (
+                <Box mt={6}>
+                  <TicketComments
+                    ticketId={selected.id}
+                    user={{
+                      token: localStorage.getItem("access_token") || "",
+                      role,
+                    }}
+                  />
+                </Box>
+              )}
+     
             </DrawerBody>
           </DrawerContent>
         </Drawer>
