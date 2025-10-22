@@ -20,3 +20,15 @@ export interface Ticket {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface TicketComment {
+  id: string;
+  ticketId: string;
+  content: string;
+  createdAt: string;
+  author: {
+    id: string;
+    name: string;
+    role: User["role"];
+  };
+}

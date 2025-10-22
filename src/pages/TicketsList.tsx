@@ -26,14 +26,17 @@ import {
   ModalBody,
   ModalCloseButton,
   IconButton,
+  Divider,
 } from "@chakra-ui/react";
 import Navbar from "../components/Navbar";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { ChangeEvent } from "react";
 import toast from "react-hot-toast";
 import { api } from "../api";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeftIcon, ArrowRightIcon, SearchIcon } from "@chakra-ui/icons";
+import type { TicketComment } from "../types/ticket";
 
 export default function TicketsList() {
   const [tickets, setTickets] = useState<any[]>([]);
@@ -44,24 +47,53 @@ export default function TicketsList() {
   const [role, setRole] = useState<string>("");
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
-  const [limit] = useState(5);
+  const [limit, setLimit] = useState(5);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
   const [statusLocal, setStatusLocal] = useState<string>("OPEN");
   const [agents, setAgents] = useState<any[]>([]);
+  const startItem = totalItems === 0 ? 0 : (page - 1) * limit + 1;
+  const endItem = totalItems === 0 ? 0 : Math.min(page * limit, totalItems);
+  const [comments, setComments] = useState<TicketComment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentText, setCommentText] = useState("");
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const COMMENT_ROLE_COLOR: Record<string, string> = {
+    ADMIN: "purple",
+    AGENT: "teal",
+    CUSTOMER: "orange",
+  };
+  const commentDateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat("es-MX", {
+        dateStyle: "short",
+        timeStyle: "short",
+      }),
+    []
+  );
 
   // 📦 Cargar tickets con paginación y búsqueda
-  const loadTickets = async (pageNum = 1, searchText = "") => {
+  const loadTickets = async (
+    pageNum = 1,
+    searchText = "",
+    limitParam = limit
+  ) => {
     setLoading(true);
     try {
       const res = await api.get("/tickets", {
-        params: { page: pageNum, limit, search: searchText },
+        params: {
+          page: pageNum,
+          limit: limitParam,
+          search: searchText.trim() || undefined,
+        },
       });
       setTickets(res.data.data || []); // ✅ solo el array
-      setTotalPages(res.data.totalPages || 1);
-      setPage(res.data.page || 1);
+      setTotalPages(Math.max(1, res.data.totalPages || 1));
+      setTotalItems(res.data.total ?? 0);
+      setPage(res.data.page || pageNum);
     } catch {
       toast.error("Error al cargar tickets ❌");
     } finally {
@@ -76,7 +108,7 @@ export default function TicketsList() {
       const payload = JSON.parse(atob(token.split(".")[1]));
       setRole(payload.role);
     }
-    loadTickets();
+    loadTickets(1, "", limit);
   }, []);
 
   // 🔄 Sincronizar estado local al abrir ticket
@@ -96,9 +128,29 @@ export default function TicketsList() {
     onClose: onModalClose,
   } = useDisclosure();
 
+  const loadComments = async (ticketId: string) => {
+    setCommentsLoading(true);
+    try {
+      const res = await api.get(`/tickets/${ticketId}/comments`);
+      setComments(res.data.comments || []);
+    } catch {
+      toast.error("Error al cargar comentarios ❌");
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  const resetCommentsState = () => {
+    setComments([]);
+    setCommentText("");
+    setCommentsLoading(false);
+  };
+
   // 📋 Abrir detalle
   const openTicket = (t: any) => {
     setSelected(t);
+    resetCommentsState();
+    loadComments(t.id);
     onDrawerOpen();
   };
 
@@ -111,7 +163,7 @@ export default function TicketsList() {
       setTitle("");
       setDescription("");
       onModalClose();
-      loadTickets();
+      loadTickets(1, search, limit);
     } catch {
       toast.error("Error al crear el ticket ❌");
     }
@@ -147,10 +199,57 @@ export default function TicketsList() {
       await api.patch(`/tickets/${selected.id}/assign`, { assigneeId });
       toast.success("Ticket asignado correctamente ✅");
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
-      loadTickets(page);
+      loadTickets(page, search, limit);
     } catch {
       toast.error("Error al asignar ticket ❌");
     }
+  };
+
+  const handleSearch = () => {
+    const trimmed = search.trim();
+    setSearch(trimmed);
+    loadTickets(1, trimmed, limit);
+  };
+
+  const handleSubmitComment = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selected?.id) return;
+    const trimmed = commentText.trim();
+    if (!trimmed) {
+      toast.error("Escribe un comentario antes de enviarlo");
+      return;
+    }
+    setCommentSubmitting(true);
+    try {
+      const res = await api.post(`/tickets/${selected.id}/comments`, {
+        content: trimmed,
+      });
+      setComments((prev) => [...prev, res.data]);
+      setCommentText("");
+      toast.success("Comentario agregado ✅");
+    } catch {
+      toast.error("Error al agregar comentario ❌");
+    } finally {
+      setCommentSubmitting(false);
+    }
+  };
+
+  const handleDrawerClose = () => {
+    onDrawerClose();
+    resetCommentsState();
+  };
+
+  const canComment = ["ADMIN", "AGENT", "CUSTOMER"].includes(role);
+
+  const handleClearSearch = () => {
+    setSearch("");
+    loadTickets(1, "", limit);
+  };
+
+  const handleLimitChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const newLimit = Number(event.target.value);
+    setLimit(newLimit);
+    loadTickets(1, search.trim(), newLimit);
   };
 
   // 🎨 Render
@@ -180,19 +279,46 @@ export default function TicketsList() {
         </Flex>
 
         {/* 🔍 Buscador */}
-        <Flex mb={4} gap={2}>
+        <Flex
+          mb={4}
+          gap={2}
+          flexWrap="wrap"
+          align={["stretch", "center"]}
+        >
           <Input
             placeholder="Buscar tickets..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") handleSearch();
+            }}
             bg="gray.700"
+            maxW={["100%", "320px", "360px"]}
           />
           <IconButton
             icon={<SearchIcon />}
             colorScheme="teal"
             aria-label="Buscar"
-            onClick={() => loadTickets(1, search)}
+            onClick={handleSearch}
+            isLoading={loading}
           />
+          <Button
+            variant="ghost"
+            onClick={handleClearSearch}
+            isDisabled={!search.trim()}
+          >
+            Limpiar
+          </Button>
+          <Select
+            value={String(limit)}
+            onChange={handleLimitChange}
+            maxW={["100%", "180px"]}
+            bg="gray.700"
+          >
+            <option value="5">5 por página</option>
+            <option value="10">10 por página</option>
+            <option value="20">20 por página</option>
+          </Select>
         </Flex>
 
         {/* 📋 Listado */}
@@ -239,29 +365,46 @@ export default function TicketsList() {
         )}
 
         {/* 📄 Paginador */}
-        <Flex justify="center" mt={6} align="center" gap={4}>
-          <IconButton
-            icon={<ArrowLeftIcon />}
-            aria-label="Anterior"
-            onClick={() => page > 1 && loadTickets(page - 1, search)}
-            isDisabled={page <= 1}
-          />
-          <Text>
-            Página {page} de {totalPages}
+        <Flex
+          justify="space-between"
+          align={["flex-start", "center"]}
+          flexWrap="wrap"
+          gap={3}
+          mt={6}
+        >
+          <Text color="gray.400">
+            {totalItems > 0
+              ? `Mostrando ${startItem}-${endItem} de ${totalItems} tickets`
+              : "Sin resultados"}
           </Text>
-          <IconButton
-            icon={<ArrowRightIcon />}
-            aria-label="Siguiente"
-            onClick={() => page < totalPages && loadTickets(page + 1, search)}
-            isDisabled={page >= totalPages}
-          />
+          <Flex align="center" gap={4}>
+            <IconButton
+              icon={<ArrowLeftIcon />}
+              aria-label="Anterior"
+              onClick={() =>
+                page > 1 && loadTickets(page - 1, search, limit)
+              }
+              isDisabled={page <= 1 || loading}
+            />
+            <Text>
+              Página {page} de {totalPages}
+            </Text>
+            <IconButton
+              icon={<ArrowRightIcon />}
+              aria-label="Siguiente"
+              onClick={() =>
+                page < totalPages && loadTickets(page + 1, search, limit)
+              }
+              isDisabled={page >= totalPages || loading}
+            />
+          </Flex>
         </Flex>
 
         {/* Drawer de detalles */}
         <Drawer
           isOpen={isDrawerOpen}
           placement="right"
-          onClose={onDrawerClose}
+          onClose={handleDrawerClose}
           size="md"
         >
           <DrawerOverlay />
@@ -307,6 +450,76 @@ export default function TicketsList() {
               <Text mt={6} whiteSpace="pre-wrap">
                 {selected?.description}
               </Text>
+
+              <Divider my={6} />
+              <Heading size="sm" mb={3}>
+                Comentarios
+              </Heading>
+              {commentsLoading ? (
+                <Flex justify="center" py={4}>
+                  <Spinner size="sm" />
+                </Flex>
+              ) : comments.length > 0 ? (
+                <VStack spacing={3} align="stretch">
+                  {comments.map((comment) => (
+                    <Box
+                      key={comment.id}
+                      bg="gray.700"
+                      p={3}
+                      rounded="md"
+                      shadow="sm"
+                    >
+                      <Flex justify="space-between" align="center" gap={3}>
+                        <Text fontWeight="bold">
+                          {comment.author?.name || "Usuario"}
+                        </Text>
+                        <Text fontSize="xs" color="gray.400">
+                          {commentDateFormatter.format(
+                            new Date(comment.createdAt)
+                          )}
+                        </Text>
+                      </Flex>
+                      <Badge
+                        mt={2}
+                        colorScheme={
+                          COMMENT_ROLE_COLOR[comment.author?.role ?? ""] ||
+                          "gray"
+                        }
+                      >
+                        {comment.author?.role || "SIN ROL"}
+                      </Badge>
+                      <Text mt={2} whiteSpace="pre-wrap">
+                        {comment.content}
+                      </Text>
+                    </Box>
+                  ))}
+                </VStack>
+              ) : (
+                <Text color="gray.400">Aún no hay comentarios.</Text>
+              )}
+
+              {canComment && (
+                <Box mt={6}>
+                  <form onSubmit={handleSubmitComment}>
+                    <VStack align="stretch" spacing={3}>
+                      <Textarea
+                        placeholder="Escribe un comentario..."
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        rows={4}
+                      />
+                      <Button
+                        colorScheme="teal"
+                        type="submit"
+                        isLoading={commentSubmitting}
+                        isDisabled={commentSubmitting}
+                      >
+                        Enviar comentario
+                      </Button>
+                    </VStack>
+                  </form>
+                </Box>
+              )}
             </DrawerBody>
           </DrawerContent>
         </Drawer>
